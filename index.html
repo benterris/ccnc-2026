@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCNC – Enregistrements</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 1rem; background: #fafafa; color: #222; }
+  h1 { font-size: 1.5rem; }
+  #songs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+  #songs button { padding: .5rem 1rem; border: 1px solid #888; border-radius: 6px; background: #fff; cursor: pointer; font-size: 1rem; }
+  #songs button.active { background: #2b5797; color: #fff; border-color: #2b5797; }
+  section { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: .5rem 1rem 1rem; margin-bottom: 1rem; }
+  section h2 { font-size: 1.15rem; margin: .5rem 0; }
+  .rec { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .4rem 0; border-top: 1px solid #eee; }
+  .rec:first-of-type { border-top: none; }
+  .rec audio { flex: 0 0 auto; }
+  .singers { font-weight: 500; }
+</style>
+</head>
+<body>
+<h1>CCNC – Enregistrements</h1>
+<div id="songs"></div>
+<div id="pages"></div>
+
+<script>
+// To add a recording: put the file in its song folder and add its path here.
+const FILES = [
+  "GosseDeRiche-07/GosseDeRiche-07-p55-DaDiOl.m4a",
+  "GosseDeRiche-07/GosseDeRiche-07-p55-SeMaViCh.m4a",
+  "Madame-10/Madame-10-p90-DaAc.m4a",
+  "Madame-10/Madame-10-p90-MaCh.m4a",
+  "Madame-10/Madame-10-p90-Ol.m4a",
+  "Madame-10/Madame-10-p90-SeDi.m4a",
+  "Madame-10/Madame-10-p90-Vi.m4a",
+  "Madame-10/Madame-10-p95-DaAc.m4a",
+  "Madame-10/Madame-10-p95-MaChOl.m4a",
+  "Madame-10/Madame-10-p95-SeDiVi.m4a",
+  "Madame-21/Madame-21-p175-ChDiDa.m4a",
+  "Madame-21/Madame-21-p175-OlAc.m4a",
+  "Madame-21/Madame-21-p175-SeMaVi.m4a",
+  "PLM-07/PLM-07-p67-ChMaViSe.m4a",
+  "PLM-07/PLM-07-p67-DiOlAcDa.m4a",
+  "PLM-08/PLM-08-p91-DaOlAcVi.m4a",
+  "PLM-08/PLM-08-p91-SeDiMaCh.m4a",
+  "Phiphi-07/Phiphi-07-p42-OlAcMaVi.m4a",
+  "Phiphi-07/Phiphi-07-p42-SeChDi.m4a",
+  "Phiphi-07/Phiphi-07-p46-AcOlViMa.m4a",
+  "Phiphi-07/Phiphi-07-p46-SeDiDaCh.m4a",
+  "Phiphi-07/Phiphi-07-p54-DaAcMaVi.m4a",
+  "Phiphi-07/Phiphi-07-p54-OlCh.m4a",
+  "Phiphi-07/Phiphi-07-p54-SeDi.m4a",
+];
+
+const SINGERS = {
+  Da: "Daniel", Ol: "Olivier", Ch: "Christelle", Di: "Didier",
+  Se: "Séverine", Ma: "Marie", Ac: "Anne-Christine", Vi: "Virginie",
+};
+
+// songs: { songName: { pageNumber: [ {path, singers} ] } }
+const songs = {};
+for (const path of FILES) {
+  const name = path.split("/").pop();
+  const m = name.match(/^(.+)-p(\d+)-([A-Za-z]+)\.m4a$/);
+  if (!m) { console.warn("Unrecognized file name:", path); continue; }
+  const [, song, page, codes] = m;
+  const singers = (codes.match(/[A-Z][a-z]/g) || []).map(c => SINGERS[c] || c);
+  ((songs[song] ??= {})[page] ??= []).push({ path, singers });
+}
+
+const songsEl = document.getElementById("songs");
+const pagesEl = document.getElementById("pages");
+
+function showSong(song) {
+  for (const b of songsEl.children) b.classList.toggle("active", b.textContent === song);
+  pagesEl.innerHTML = "";
+  if (!songs[song]) return;
+  const pages = Object.keys(songs[song]).sort((a, b) => a - b);
+  for (const page of pages) {
+    const section = document.createElement("section");
+    const h2 = document.createElement("h2");
+    h2.textContent = `Page ${page}`;
+    section.appendChild(h2);
+    for (const rec of songs[song][page]) {
+      const row = document.createElement("div");
+      row.className = "rec";
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.preload = "none";
+      audio.src = encodeURI(rec.path);
+      const label = document.createElement("span");
+      label.className = "singers";
+      label.textContent = rec.singers.join(", ");
+      row.append(audio, label);
+      section.appendChild(row);
+    }
+    pagesEl.appendChild(section);
+  }
+}
+
+for (const song of Object.keys(songs).sort()) {
+  const b = document.createElement("button");
+  b.textContent = song;
+  b.onclick = () => { location.hash = encodeURIComponent(song); };
+  songsEl.appendChild(b);
+}
+
+// Only one recording plays at a time
+document.addEventListener("play", e => {
+  for (const a of document.querySelectorAll("audio")) if (a !== e.target) a.pause();
+}, true);
+
+window.addEventListener("hashchange", () => showSong(decodeURIComponent(location.hash.slice(1))));
+showSong(decodeURIComponent(location.hash.slice(1)));
+</script>
+</body>
+</html>
